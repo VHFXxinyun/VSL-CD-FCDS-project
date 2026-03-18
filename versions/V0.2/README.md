@@ -1,1 +1,1 @@
-
+V0.2 is the initial GPIO-based debugging prototype. It establishes the basic control link between Raspberry Pi and ESP32 and validates dual-servo pan-tilt motion control. This version is intended for hardware integration and control logic verification only, without serial communication or vision modules.
