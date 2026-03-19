@@ -1,15 +1,6 @@
-V0.4 is the dual-axis incremental serial communication version.
-This version upgrades the command protocol from discrete direction commands to numeric pan-tilt incremental commands such as PAN:+15 TILT:-24.
-
-UPDATE：
-Raspberry Pi 5 ↔ ESP32 via USB serial communication
-
-Dual-axis incremental command protocol
-
-Pan-tilt servo control through ESP32
-
-Special commands: HOME, OUT
-
-Motion direction convention verified experimentally
+V0.4 simplifies the dual-axis serial control protocol into a compact two-value format. 
+The Raspberry Pi sends incremental commands such as +15,-24 to the ESP32 over USB serial,
+where the first value represents pan increment and the second value represents tilt increment. 
+The ESP32 parses the command, updates the two servo positions, and also supports special commands such as HOME and OUT.
 
 2026/3/19      by VHFX_xingyun
