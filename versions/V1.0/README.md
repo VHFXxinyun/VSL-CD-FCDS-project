@@ -81,3 +81,5 @@ When the target remains inside the stable region continuously for a predefined t
 
 ```text
 OUT
+---
+The ESP32 then activates the output pin to indicate target completion.
