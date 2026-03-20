@@ -81,3 +81,82 @@ When the target remains inside the stable region continuously for a predefined t
 
 ```text
 OUT
+
+The ESP32 then activates the output pin to indicate target completion.
+
+Target Lost Logic
+
+When the target is not detected:
+
+short-term loss → LOST_WAIT
+
+long-term loss → LOST_HOME
+
+If the target remains lost for a predefined number of frames, the Raspberry Pi sends:
+
+HOME
+
+The pan-tilt platform then returns to its predefined home position.
+
+Main Python Parameters
+
+Important parameters used in Version 1.0:
+
+SEND_INTERVAL = 0.03
+
+LOST_THRESHOLD = 10
+
+OUT_HOLD_TIME = 2.0
+
+DONE_DISPLAY_TIME = 1.0
+
+SMOOTH_ALPHA = 0.25
+
+Tracking parameters:
+
+DEADZONE_X = 15
+
+DEADZONE_Y = 15
+
+THRESHOLD_X_SMALL = 40
+
+THRESHOLD_X_MEDIUM = 100
+
+THRESHOLD_Y_SMALL = 40
+
+THRESHOLD_Y_MEDIUM = 100
+
+STEP_SMALL = 6
+
+STEP_MEDIUM = 15
+
+STEP_LARGE = 30
+
+Stable-zone hysteresis:
+
+STABLE_ENTER_X = 10
+
+STABLE_ENTER_Y = 10
+
+STABLE_EXIT_X = 20
+
+STABLE_EXIT_Y = 20
+
+Serial Protocol
+
+Supported commands:
+
+Incremental motion command
++15,-24
+
+Meaning:
+
+first value = pan_delta
+
+second value = tilt_delta
+
+Special commands
+HOME
+OUT
+
+More details are provided in protocol.md.
