@@ -1,0 +1,186 @@
+#include <SCServo.h>
+
+SMS_STS st;
+
+#define S_RXD 18
+#define S_TXD 19
+
+const int OUTPUT_PIN = 4;
+
+// 舵机信息
+byte servo_ID[2];
+s16 servo_position[2];
+u16 servo_speed[2];
+byte servo_accels[2];
+
+// HOME 位置
+const s16 SERVO0_HOME = 2500;
+const s16 SERVO1_HOME = 2400;
+
+// 舵机总位置限幅
+const s16 SERVO0_MIN = 1000;
+const s16 SERVO0_MAX = 4000;
+const s16 SERVO1_MIN = 1000;
+const s16 SERVO1_MAX = 4000;
+
+// 单次增量限幅
+const int MAX_DELTA = 50;
+
+
+void triggerOutput(unsigned long duration_ms = 1000) {
+  digitalWrite(OUTPUT_PIN, HIGH);
+  delay(duration_ms);
+  digitalWrite(OUTPUT_PIN, LOW);
+}
+
+void sendAck(const String& cmd) {
+  Serial.print("Received: ");
+  Serial.println(cmd);
+
+  Serial.print("OK: ");
+  Serial.println(cmd);
+}
+
+void sendError(const String& msg) {
+  Serial.print("ERR: ");
+  Serial.println(msg);
+}
+
+void moveServos() {
+  // 总位置限幅
+  servo_position[0] = constrain(servo_position[0], SERVO0_MIN, SERVO0_MAX);
+  servo_position[1] = constrain(servo_position[1], SERVO1_MIN, SERVO1_MAX);
+
+  // 同步发送到两个舵机
+  st.SyncWritePosEx(servo_ID, 2, servo_position, servo_speed, servo_accels);
+}
+
+bool isValidSignedInteger(const String& s) {
+  if (s.length() == 0) {
+    return false;
+  }
+
+  for (int i = 0; i < s.length(); i++) {
+    char c = s.charAt(i);
+
+    // 第一个字符允许正负号
+    if (i == 0 && (c == '+' || c == '-')) {
+      continue;
+    }
+
+    if (!isDigit(c)) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+bool parseIncrementCommand(const String& cmd, int& panDelta, int& tiltDelta) {
+  int commaIndex = cmd.indexOf(',');
+
+  if (commaIndex == -1) {
+    return false;
+  }
+
+  String panStr = cmd.substring(0, commaIndex);
+  String tiltStr = cmd.substring(commaIndex + 1);
+
+  panStr.trim();
+  tiltStr.trim();
+
+  if (!isValidSignedInteger(panStr) || !isValidSignedInteger(tiltStr)) {
+    return false;
+  }
+
+  panDelta = panStr.toInt();
+  tiltDelta = tiltStr.toInt();
+
+  return true;
+}
+
+void setup() {
+  // 树莓派 <-> ESP32 USB 串口
+  Serial.begin(115200);
+
+  // ESP32 <-> 总线舵机串口
+  Serial1.begin(1000000, SERIAL_8N1, S_RXD, S_TXD);
+  st.pSerial = &Serial1;
+
+  delay(500);
+
+  Serial.println("ESP32 ready");
+  Serial.println("Servo ready");
+
+  servo_ID[0] = 1;
+  servo_ID[1] = 2;
+
+  servo_speed[0] = 3400;
+  servo_speed[1] = 3400;
+
+  servo_accels[0] = 50;
+  servo_accels[1] = 50;
+
+  servo_position[0] = SERVO0_HOME;
+  servo_position[1] = SERVO1_HOME;
+
+  pinMode(OUTPUT_PIN, OUTPUT);
+  digitalWrite(OUTPUT_PIN, LOW);
+
+  moveServos();
+
+  delay(1000);
+}
+
+void loop() {
+  if (Serial.available()) {
+    String cmd = Serial.readStringUntil('\n');
+    cmd.trim();
+    cmd.toUpperCase();
+
+    if (cmd.length() == 0) {
+      return;
+    }
+
+    // 特殊命令
+    if (cmd == "HOME") {
+      servo_position[0] = SERVO0_HOME;
+      servo_position[1] = SERVO1_HOME;
+      moveServos();
+      sendAck(cmd);
+      return;
+    }
+
+    if (cmd == "OUT") {
+      triggerOutput();
+      sendAck(cmd);
+      return;
+    }
+
+    // 增量命令
+    int panDelta = 0;
+    int tiltDelta = 0;
+
+    bool ok = parseIncrementCommand(cmd, panDelta, tiltDelta);
+
+    if (!ok) {
+      sendError("INVALID_CMD");
+      return;
+    }
+
+    // 单次增量限幅
+    panDelta = constrain(panDelta, -MAX_DELTA, MAX_DELTA);
+    tiltDelta = constrain(tiltDelta, -MAX_DELTA, MAX_DELTA);
+
+    // 方向约定（你已实测）
+    // panDelta 正 -> 向右
+    // panDelta 负 -> 向左
+    // tiltDelta 正 -> 向下
+    // tiltDelta 负 -> 向上
+    servo_position[0] += panDelta;
+    servo_position[1] += tiltDelta;
+
+    moveServos();
+    sendAck(cmd);
+  }
+}
